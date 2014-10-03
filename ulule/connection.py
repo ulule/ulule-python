@@ -10,14 +10,14 @@ import sys
 import time
 
 
-class Error(Exception):
-    pass
-
 ERROR_MAP = {}
 
 logger = logging.getLogger('ulule')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stderr))
+
+
+from .exceptions import APIError
 
 
 class Ulule(object):
@@ -36,7 +36,7 @@ class Ulule(object):
                 apikey = os.environ['ULULE_APIKEY']
 
         if apikey is None:
-            raise Error('You must provide an Ulule API key')
+            raise Exception('You must provide an Ulule API key')
 
         self.apikey = apikey
 
@@ -45,7 +45,7 @@ class Ulule(object):
                 username = os.environ['ULULE_USERNAME']
 
         if username is None:
-            raise Error('You must provide an Ulule username')
+            raise Exception('You must provide an Ulule username')
 
         self.username = username
 
@@ -110,14 +110,14 @@ class Ulule(object):
         '''Take a result representing an error and cast it to a specific
         exception if possible (use a generic ulule.Error exception for
         unknown cases)'''
-        if 'status' not in result\
-                or result['status'] != 'error'\
-                or 'name' not in result:
-            raise Error('We received an unexpected error: %r' % result)
+        if ('status' not in result
+                or result['status'] != 'error'
+                or 'name' not in result):
+            raise APIError('We received an unexpected error: %r' % result)
 
         if result['name'] in ERROR_MAP:
             return ERROR_MAP[result['name']](result['error'])
-        return Error(result['error'])
+        return APIError(result['error'])
 
     def log(self, *args, **kwargs):
         '''Proxy access to the ulule logger,
