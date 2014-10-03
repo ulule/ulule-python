@@ -15,7 +15,7 @@ class Error(Exception):
 
 ERROR_MAP = {}
 
-logger = logging.getLogger('ulule_mailchimp')
+logger = logging.getLogger('ulule')
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler(sys.stderr))
 
