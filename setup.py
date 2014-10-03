@@ -2,9 +2,11 @@ from setuptools import setup
 
 import os.path
 
+version = __import__('ulule').__version__
+
 setup(
     name='ulule-python',
-    version='0.1',
+    version=version,
     author='Damien Cirotteau',
     author_email='dcirotteau@ctrl-x.fr',
     description='A Python API library for the Ulule crowdfunding platform.',
