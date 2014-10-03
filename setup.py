@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import os.path
 
@@ -13,8 +13,8 @@ setup(
     long_description=open(os.path.join(os.path.dirname(__file__), 'README.rst')).read(),
     license='MIT',
     keywords='ulule crowdfunding api',
+    packages=find_packages(),
     url='https://github.com/ulule/ulule-python',
-    py_modules=['ulule'],
     install_requires=['requests >= 0.13.2', ],
     classifiers=[
         'Development Status :: 3 - Alpha',
