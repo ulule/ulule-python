@@ -21,6 +21,20 @@ from .exceptions import APIError
 from .endpoints import endpoints
 
 
+def cast_error(result):
+    '''Take a result representing an error and cast it to a specific
+    exception if possible (use a generic ulule.Error exception for
+    unknown cases)'''
+    if ('status' not in result
+            or result['status'] != 'error'
+            or 'name' not in result):
+        raise APIError('We received an unexpected error: %r' % result)
+
+    if result['name'] in ERROR_MAP:
+        return ERROR_MAP[result['name']](result['error'])
+    return APIError(result['error'])
+
+
 class Ulule(object):
     root = 'https://api.ulule.com/v1/'
     last_request = {}
@@ -99,25 +113,11 @@ class Ulule(object):
         }
 
         if r.status_code != requests.codes.ok:
-            raise self.cast_error(r)
+            raise cast_error(r)
 
         result = r.json()
 
         return result
-
-    @staticmethod
-    def cast_error(result):
-        '''Take a result representing an error and cast it to a specific
-        exception if possible (use a generic ulule.Error exception for
-        unknown cases)'''
-        if ('status' not in result
-                or result['status'] != 'error'
-                or 'name' not in result):
-            raise APIError('We received an unexpected error: %r' % result)
-
-        if result['name'] in ERROR_MAP:
-            return ERROR_MAP[result['name']](result['error'])
-        return APIError(result['error'])
 
     def log(self, *args, **kwargs):
         '''Proxy access to the ulule logger,
