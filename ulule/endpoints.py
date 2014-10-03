@@ -2,41 +2,31 @@ class Endpoint(object):
     def __init__(self, master):
         self.master = master
 
-    @staticmethod
-    def pagination_payload(offset=0, limit=20):
-        return {
-            'offset': offset,
-            'limit': limit,
+    def get(self, slug):
+        return self._request(self.path, slug)
+
+    def list(self, *args, **kwargs):
+        payload = {
+            'offset': kwargs.get('offset', 0),
+            'limit': kwargs.get('limit', 10),
         }
+
+        payload.update(kwargs or {})
+
+        paths = (self.path, ) + args
+
+        return self._request(*paths, **payload)
+
+    def _request(self, *args, **kwargs):
+        return self.master.call('/'.join(args), kwargs)
 
 
 class Users(Endpoint):
     path = 'users'
 
-    def get(self, username):
-        '''User information
-
-        Args:
-            username (string): the username of the user
-
-        Returns:
-            struct: struct of the user data::
-                date_joined (string): the date of when the user joined
-                id (int): the id of the user
-                is_active (boolean): is the user active
-                last_login (string): the date of when the user last login
-                public_url (string): the public url of the user on ulule.com
-                resource_uri (string): the api ressource uri
-                username (string); the username of the user
-        '''
-        return self.master.call('%s/%s' % (self.path, username))
-
-    def _projects(self, username, payload=None):
-        return self.master.call('%s/%s/projects' % (self.path, username),
-                                payload)
-
-    def created_projects(self, username, offset=0, limit=20):
-        '''Projects created by the user
+    def get_created_projects(self, username, *args, **kwargs):
+        """
+        Projects created by the user
 
         Args:
             username (string): the username of the user
@@ -45,28 +35,14 @@ class Users(Endpoint):
 
         Returns:
             struct: struct of the project::
-        '''
-        payload = self.pagination_payload(offset, limit)
-        payload.update({'filter': 'created'})
-        return self._projects(username, payload=payload)
+        """
 
-    def followed_projects(self, username, offset=0, limit=20):
-        '''Projects created by the user
+        kwargs['filter'] = 'created'
+        return self.list(username, 'projects', *args, **kwargs)
 
-        Args:
-            username (string): the username of the user
-            offset (int): the offset of the query
-            limit (int): the number of items to return (max 20)
-
-        Returns:
-            struct: struct of the project::
-        '''
-        payload = self.pagination_payload(offset, limit)
-        payload.update({'filter': 'followed'})
-        return self._projects(username, payload=payload)
-
-    def supported_projects(self, username, offset=0, limit=20):
-        '''Projects created by the user
+    def get_followed_projects(self, username, *args, **kwargs):
+        """
+        Projects created by the user
 
         Args:
             username (string): the username of the user
@@ -75,40 +51,46 @@ class Users(Endpoint):
 
         Returns:
             struct: struct of the project::
-        '''
-        payload = self.pagination_payload(offset, limit)
-        payload.update({'filter': 'supported'})
-        return self._projects(username, payload=payload)
+        """
+
+        kwargs['filter'] = 'followed'
+        return self.list(username, 'projects', *args, **kwargs)
+
+    def get_supported_projects(self, username, *args, **kwargs):
+        """
+        Projects created by the user
+
+        Args:
+            username (string): the username of the user
+            offset (int): the offset of the query
+            limit (int): the number of items to return (max 20)
+
+        Returns:
+            struct: struct of the project::
+        """
+
+        kwargs['filter'] = 'supported'
+        return self.list(username, 'projects', *args, **kwargs)
 
 
 class Projects(Endpoint):
     path = 'projects'
 
-    def get(self, slug):
-        return self.master.call('%s/%s' % (self.path, slug))
+    def get_comments(self, slug, *args, **kwargs):
+        return self.list(slug, 'comments', *args, **kwargs)
 
-    def comments(self, slug, offset=0, limit=20):
-        payload = self.pagination_payload(offset, limit)
-        return self.master.call('%s/%s/comments' % (self.path, slug), payload)
+    def get_news(self, slug, *args, **kwargs):
+        return self.list(slug, 'news', *args, **kwargs)
 
-    def news(self, slug, offset=0, limit=20):
-        payload = self.pagination_payload(offset, limit)
-        return self.master.call('%s/%s/news' % (self.path, slug), payload)
-
-    def supporters(self, slug, offset=0, limit=20):
-        payload = self.pagination_payload(offset, limit)
-        return self.master.call('%s/%s/supporters' % (self.path, slug), payload)
+    def get_supporters(self, slug, *args, **kwargs):
+        return self.list(slug, 'supporters', *args, **kwargs)
 
 
 class News(Endpoint):
     path = 'news'
 
-    def get(self, nid):
-        return self.master.call('%s/%s' % (self.path, nid))
-
-    def comments(self, nid, offset=0, limit=20):
-        payload = self.pagination_payload(offset, limit)
-        return self.master.call('%s/%s/comments' % (self.path, nid), payload)
+    def get_comments(self, pk, *args, **kwargs):
+        return self.list(pk, 'comments', *args, **kwargs)
 
 
 endpoints = [Users, Projects, News]
