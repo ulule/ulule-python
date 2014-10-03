@@ -12,68 +12,62 @@ import time
 
 ERROR_MAP = {}
 
-logger = logging.getLogger('ulule')
-logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler(sys.stderr))
+
+default_logger = logging.getLogger('ulule')
+default_logger.setLevel(logging.INFO)
+default_logger.addHandler(logging.StreamHandler(sys.stderr))
 
 
-from .exceptions import APIError
 from .endpoints import endpoints
+from .exceptions import APIError
+from . import __version__
 
 
 def cast_error(result):
-    '''Take a result representing an error and cast it to a specific
+    """
+    Take a result representing an error and cast it to a specific
     exception if possible (use a generic ulule.Error exception for
-    unknown cases)'''
+    unknown cases)
+    """
     if ('status' not in result
             or result['status'] != 'error'
             or 'name' not in result):
-        raise APIError('We received an unexpected error: %r' % result)
+
+        raise APIError('Unexpected error: %r' % result)
 
     if result['name'] in ERROR_MAP:
         return ERROR_MAP[result['name']](result['error'])
+
     return APIError(result['error'])
 
 
-class Ulule(object):
+class Connection(object):
     root = 'https://api.ulule.com/v1/'
     last_request = {}
 
-    def __init__(self, username=None, apikey=None, lang=None, debug=False):
+    def __init__(self, username=None, api_key=None, lang=None, logger=None):
         self.session = requests.session()
-        if debug:
-            self.level = logging.INFO
-        else:
-            self.level = logging.DEBUG
 
-        if apikey is None:
-            if 'ULULE_APIKEY' in os.environ:
-                apikey = os.environ['ULULE_APIKEY']
+        self.logger = logger or default_logger
 
-        if apikey is None:
+        api_key = os.environ.get('ULULE_API_KEY', api_key)
+
+        if api_key is None:
             raise Exception('You must provide an Ulule API key')
 
-        self.apikey = apikey
-
-        if username is None:
-            if 'ULULE_USERNAME' in os.environ:
-                username = os.environ['ULULE_USERNAME']
+        username = os.environ.get('ULULE_USERNAME', username)
 
         if username is None:
             raise Exception('You must provide an Ulule username')
 
+        self.api_key = api_key
         self.username = username
-
-        if lang is not None:
-            self.lang = lang
+        self.lang = lang
 
         for endpoint_class in endpoints:
-            setattr(self, endpoint_class.path, endpoint_class())
+            setattr(self, endpoint_class.path, endpoint_class(self))
 
     def call(self, url, payload=None):
-        '''Actually make the API call with the given params
-        this should only be called by the namespace methods
-        use the helpers in regular usage like m.helper.ping()'''
         if payload is None:
             payload = {}
 
@@ -82,12 +76,13 @@ class Ulule(object):
 
         self.log('GET %s%s: %s' % (self.root, url, payload))
         start = time.time()
+
         r = self.session.get(
             '%s%s' % (self.root, url),
             params=payload,
             headers={
-                'user-agent': 'Ulule-Python/0.1',
-                'Authorization': 'ApiKey %s:%s' % (self.username, self.apikey)
+                'user-agent': 'Ulule-Python/%s' % __version__,
+                'Authorization': 'ApiKey %s:%s' % (self.username, self.api_key)
             })
         try:
             # grab the remote_addr before grabbing the text
@@ -120,9 +115,11 @@ class Ulule(object):
         return result
 
     def log(self, *args, **kwargs):
-        '''Proxy access to the ulule logger,
-        changing the level based on the debug setting'''
-        logger.log(self.level, *args, **kwargs)
+        """
+        Proxy access to the ulule logger,
+        changing the level based on the debug setting
+        """
+        self.logger.log(self.logger.level, *args, **kwargs)
 
     def __repr__(self):
-        return '<Ulule %s>' % self.username
+        return '<Ulule %s:%s>' % (self.username, self.api_key)
